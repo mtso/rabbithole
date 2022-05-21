@@ -67,7 +67,7 @@ fn rocket() -> _ {
 
     rocket::build()
     .manage(connection)
-    .mount("/", FileServer::from("./static"))
+    .mount("/", FileServer::from("./ui/build"))
     .mount("/", routes![
         rethink,
         rabbitmq,
