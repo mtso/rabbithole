@@ -21,7 +21,7 @@ fn index() -> &'static str {
 async fn rethink() -> String {
     match tryrethink2().await {
         Ok(s) => s,
-        Err(error) => {
+        Err(_error) => {
             println!("error: {:?}", error);
             "error".to_string()
         },
@@ -34,6 +34,8 @@ fn rocket() -> _ {
         index,
         rethink,
         resources::create_rabbit,
+        resources::create_rabbit2,
+        resources::get_rabbit,
     ])
 }
 
