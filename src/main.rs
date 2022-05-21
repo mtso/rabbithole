@@ -58,7 +58,20 @@ fn redis_setfoo() -> String {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![
+    use amiquip::{Connection};
+    let mut connection = match Connection::insecure_open("amqp://guest:guest@localhost:55006") {
+        Ok(c) => c,
+        Err(err) => panic!("failed to connect: {:?}", err),
+    };
+
+    match rabbitmq_consume(&mut connection) {
+        Ok(()) => println!("consumer started..."),
+        Err(err) => println!("consumer fail: {:?}", err),
+    };
+
+    rocket::build()
+    .manage(connection)
+    .mount("/", routes![
         index,
         rethink,
         rabbitmq,
@@ -70,8 +83,11 @@ fn rocket() -> _ {
     ])
 }
 
+use amiquip::{Connection};
 fn tryrabbitmq() -> amiquip::Result<()> {
-    use amiquip::{Connection, Exchange, Publish};
+    use amiquip::{Exchange, Publish};
+    use std::time::{SystemTime};
+
     let mut connection = Connection::insecure_open("amqp://guest:guest@localhost:55006")?;
     // Open a channel - None says let the library choose the channel ID.
     let channel = connection.open_channel(None)?;
@@ -80,9 +96,54 @@ fn tryrabbitmq() -> amiquip::Result<()> {
     let exchange = Exchange::direct(&channel);
 
     // Publish a message to the "hello" queue.
-    exchange.publish(Publish::new("hello there".as_bytes(), "hello"))?;
+    let msg = format!("hello {:?}", SystemTime::now());
+    exchange.publish(Publish::new(msg.as_bytes(), "hello"))?;
 
     connection.close()
+}
+
+fn rabbitmq_consume(connection: &mut Connection) -> amiquip::Result<()> {
+    use amiquip::{QueueDeclareOptions, ConsumerOptions, ConsumerMessage};
+    use std::thread;
+
+    //let mut connection = Connection::insecure_open("amqp://guest:guest@localhost:55006")?;
+    let channel = connection.open_channel(None)?;
+
+    thread::spawn(move || -> amiquip::Result<()> {
+        //println!("consumer spawned!");
+        let queue = channel.queue_declare("hello", QueueDeclareOptions::default()).map_err(|e| {
+            println!("error: {:?}", e);
+            e
+        })?;
+        let consumer = queue.consume(ConsumerOptions::default()).map_err(|e| {
+            println!("error: {:?}", e);
+            e
+        })?;
+
+
+        println!("consumer spawned!");
+        for message in consumer.receiver().iter() {
+
+        match message {
+            ConsumerMessage::Delivery(delivery) => {
+                let body = String::from_utf8_lossy(&delivery.body);
+                println!("Received [{}]", body);
+                consumer.ack(delivery)?;
+            }
+            other => {
+                println!("Consumer ended: {:?}", other);
+                break;
+            }
+        }
+
+            //println!("got message!: {:?}", message);
+        }
+
+        println!("consumer ending!");
+        Ok(())
+    });
+
+    Ok(())
 }
 
 async fn tryrethink2() -> reql::Result<String> {
