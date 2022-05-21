@@ -1,14 +1,9 @@
-#![feature(plugin, decl_macro)]
-
 #[macro_use] extern crate rocket;
-#[macro_use]
-extern crate serde_derive;
+#[macro_use] extern crate serde_derive;
 
 use futures::TryStreamExt;
 use reql::{r, cmd::connect::Options};
 use reql::types::ServerStatus;
-
-// let session = r.connect(()).await?;
 
 mod resources;
 
