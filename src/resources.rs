@@ -4,10 +4,35 @@ use futures::TryStreamExt;
 use reql::{r, cmd::connect::Options};
 
 use std::collections::HashMap;
+use chrono::{DateTime, Utc};
 
 #[derive(Debug, Serialize, Deserialize, FromForm)]
 pub struct CreateRabbitRequest {
     name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum RabbitStatus {
+    pending,
+    birthed,
+}
+    
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateRabbitData {
+    name: String,
+    created_at: DateTime<Utc>,
+    status: RabbitStatus,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Rabbit {
+    pub id: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub status: RabbitStatus,
+    pub name: String,
+    pub body_color: Option<String>,
+    pub patch_color: Option<String>,
+    pub eye_color: Option<String>,
 }
 
 #[post("/api/rabbits", data = "<request_data>")]
@@ -29,6 +54,34 @@ pub async fn create_rabbit2(
     }
 }
 
+#[post("/api3/rabbits", data = "<request_data>")]
+pub async fn create_rabbit3(
+    request_data: Json<CreateRabbitRequest>,
+) -> String {
+    let data = request_data.into_inner();
+    let new_rabbit = CreateRabbitData{
+        name: data.name,
+        created_at: Utc::now(),
+        status: RabbitStatus::pending,
+    };
+/*
+    let rabbit = Rabbit{
+        id: None,
+        name: data.name,
+        created_at: Utc::now(),
+        body_color: None,
+        patch_color: None,
+        eye_color: None,
+    };*/
+    match save_rabbit2(&new_rabbit).await {
+        Ok(s) => s,
+        Err(err) => {
+            println!("save error: {:?}", err);
+            "save error".to_string()
+        },
+    }
+}
+
 #[get("/api/rabbits/<id>")]
 pub async fn get_rabbit(
     id: String,
@@ -40,6 +93,66 @@ pub async fn get_rabbit(
             "get error".to_string()
         }
     }
+}
+
+#[get("/api3/rabbits/<id>")]
+pub async fn get_rabbit3(
+    id: String,
+) -> String {
+    match db_get_rabbit3(id).await {
+        Ok(s) => s,
+        Err(error) => {
+            println!("get error: {:?}", error);
+            "get error".to_string()
+        }
+    }
+}
+
+async fn save_rabbit2(rabbit: &CreateRabbitData) -> reql::Result<String> {
+    let conn = r.connect(
+        Options::new().port(55001)
+    ).await?;
+
+    let mut query = r.db("test").table("testrabbits")
+        .insert(rabbit)
+        .run(&conn);
+
+    if let Some(write_status) = query.try_next().await? {
+        if let Some(id) = get_id(&write_status) {
+
+            let mut fetchq = r.db("test").table("testrabbits")
+                .get(id).run(&conn);
+
+            if let Some(result) = fetchq.try_next().await? {
+                match rabbit_to_json(&result) {
+                    Ok(s) => Ok(s),
+                    Err(err) => {
+                        println!("json error: {:?}", err);
+                        Ok("json error".to_string())
+                    },
+                }
+            } else {
+                Ok("error fetching".to_string())
+            }
+        } else {
+            Ok("error getting id".to_string())
+        }
+    } else {
+        Ok("error".to_string())
+    }
+}
+
+fn rabbit_to_json(data: &Rabbit) -> serde_json::Result<String> {
+    serde_json::to_string(data)
+}
+
+fn get_id(stat: &WriteStatus) -> Option<String> {
+    if let Some(keys) = &stat.generated_keys {
+        if keys.len() >= 1 {
+            return keys.get(0).map(|uuid| { uuid.to_hyphenated().to_string() });
+        }
+    }
+    None
 }
 
 async fn save_rabbit(rabbit: &CreateRabbitRequest) -> reql::Result<String> {
@@ -71,6 +184,28 @@ async fn db_get_rabbit(id: String) -> reql::Result<String> {
     if let Some(change) = query.try_next().await? {
         let res = handle_map(&change);
         Ok(res)
+    } else {
+        Ok("error".to_string())
+    }
+}
+
+async fn db_get_rabbit3(id: String) -> reql::Result<String> {
+    let conn = r.connect(
+        Options::new().port(55001)
+    ).await?;
+
+    let mut query = r.db("test").table("testrabbits")
+        .get(id)
+        .run(&conn);
+
+    if let Some(result) = query.try_next().await? {
+        match rabbit_to_json(&result) {
+            Ok(s) => Ok(s),
+            Err(e) => {
+                println!("error rendering json: {:?}", e);
+                Ok("json error".to_string())
+            },
+        }
     } else {
         Ok("error".to_string())
     }

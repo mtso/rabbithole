@@ -79,7 +79,9 @@ fn rocket() -> _ {
         redis_setfoo,
         resources::create_rabbit,
         resources::create_rabbit2,
+        resources::create_rabbit3,
         resources::get_rabbit,
+        resources::get_rabbit3,
     ])
 }
 
