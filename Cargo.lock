@@ -1655,7 +1655,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rabbithutch"
+name = "rabbithole"
 version = "0.1.0"
 dependencies = [
  "amiquip",

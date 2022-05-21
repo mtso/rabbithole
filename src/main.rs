@@ -4,13 +4,9 @@
 use futures::TryStreamExt;
 use reql::{r, cmd::connect::Options};
 use reql::types::ServerStatus;
+use rocket::fs::FileServer;
 
 mod resources;
-
-#[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
-}
 
 #[get("/rethink")]
 async fn rethink() -> String {
@@ -71,8 +67,8 @@ fn rocket() -> _ {
 
     rocket::build()
     .manage(connection)
+    .mount("/", FileServer::from("./static"))
     .mount("/", routes![
-        index,
         rethink,
         rabbitmq,
         redis_getfoo,
