@@ -1,10 +1,16 @@
+#![feature(plugin, decl_macro)]
+
 #[macro_use] extern crate rocket;
+#[macro_use]
+extern crate serde_derive;
 
 use futures::TryStreamExt;
 use reql::{r, cmd::connect::Options};
 use reql::types::ServerStatus;
 
 // let session = r.connect(()).await?;
+
+mod resources;
 
 #[get("/")]
 fn index() -> &'static str {
@@ -24,7 +30,11 @@ async fn rethink() -> String {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![index, rethink])
+    rocket::build().mount("/", routes![
+        index,
+        rethink,
+        resources::create_rabbit,
+    ])
 }
 
 async fn tryrethink2() -> reql::Result<String> {

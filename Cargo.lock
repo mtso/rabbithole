@@ -1089,6 +1089,8 @@ dependencies = [
  "futures",
  "reql",
  "rocket",
+ "serde",
+ "serde_derive",
  "serde_json",
  "tokio",
 ]
@@ -1272,6 +1274,7 @@ dependencies = [
  "rocket_codegen",
  "rocket_http",
  "serde",
+ "serde_json",
  "state",
  "tempfile",
  "time",
