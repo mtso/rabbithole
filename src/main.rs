@@ -62,7 +62,6 @@ fn rocket() -> _ {
         Err(err) => panic!("failed to connect: {:?}", err),
     };
 
-    //match rabbitmq_consume(&mut connection) {
     match workers::init_rabbit_generator(&mut connection, "rabbit.updated") {
         Ok(()) => println!("consumer started..."),
         Err(err) => println!("consumer fail: {:?}", err),
@@ -103,6 +102,7 @@ fn tryrabbitmq() -> amiquip::Result<()> {
     connection.close()
 }
 
+#[allow(dead_code)]
 fn rabbitmq_consume(connection: &mut Connection) -> amiquip::Result<()> {
     use amiquip::{QueueDeclareOptions, ConsumerOptions, ConsumerMessage};
     use std::thread;

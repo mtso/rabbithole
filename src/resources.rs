@@ -11,6 +11,7 @@ pub struct CreateRabbitRequest {
     name: String,
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Debug, Serialize, Deserialize)]
 pub enum RabbitStatus {
     pending,

@@ -89,7 +89,7 @@ pub fn init_rabbit_generator(connection: &mut Connection, queue_name: &'static s
                 let id = format!("{}", body);
                 match block_on(update_rabbit(&id)) {
                     Ok(()) => (),
-                    Err(err) => println!("failed to process id={}", id),
+                    Err(err) => println!("failed to process id={} {:?}", id, err),
                 };
 
                 consumer.ack(delivery)?;
