@@ -5,6 +5,7 @@ use reql::types::WriteStatus;
 use reql::{r, cmd::connect::Options};
 
 use super::resources::RabbitStatus;
+use super::cha;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateRabbitData {
@@ -29,12 +30,16 @@ async fn update_rabbit(id: &String) -> reql::Result<()> {
         Options::new().port(55001)
     ).await?;
 
+    let body_color = cha::hash(id);
+    let patch_color = cha::hash(&body_color);
+    let eye_color = cha::hash(&patch_color);
+
     let update = UpdateRabbitData{
         id: id.clone(),
         status: RabbitStatus::birthed,
-        body_color: String::from("#123123"),
-        patch_color: String::from("#123123"),
-        eye_color: String::from("#123123"),
+        body_color: body_color,//String::from("#123123"),
+        patch_color: patch_color, // String::from("#123123"),
+        eye_color: eye_color, //String::from("#123123"),
     };
     println!("update data {:?}", update);
 

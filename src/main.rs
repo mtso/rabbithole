@@ -8,6 +8,7 @@ use rocket::fs::FileServer;
 
 mod resources;
 mod workers;
+mod cha;
 
 #[get("/rethink")]
 async fn rethink() -> String {
