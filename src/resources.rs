@@ -83,6 +83,7 @@ fn handle_write(status: &WriteStatus) -> String {
     }
 }
 
+#[allow(dead_code)]
 fn handle_query(status: &CreateRabbitRequest) -> String {
     status.name.clone()
 }
