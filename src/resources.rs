@@ -119,6 +119,10 @@ async fn save_rabbit2(rabbit: &CreateRabbitData) -> reql::Result<String> {
 
     if let Some(write_status) = query.try_next().await? {
         if let Some(id) = get_id(&write_status) {
+            match publish_rabbit(&id, "rabbit.updated") {
+                Ok(()) => println!("published rabbit {}", id),
+                Err(err) => println!("error publishing rabbit: {:?}", err),
+            };
 
             let mut fetchq = r.db("test").table("testrabbits")
                 .get(id).run(&conn);
@@ -230,3 +234,18 @@ fn handle_map(map: &HashMap<String, String>) -> String {
     }
 }
 
+use amiquip::{Connection};
+fn publish_rabbit(rabbit_id: &String, queue_name: &'static str) -> amiquip::Result<()> {
+    use amiquip::{Exchange, Publish};
+
+    let mut connection = Connection::insecure_open("amqp://guest:guest@localhost:55006")?;
+    // Open a channel - None says let the library choose the channel ID.
+    let channel = connection.open_channel(None)?;
+
+    // Get a handle to the direct exchange on our channel.
+    let exchange = Exchange::direct(&channel);
+
+    exchange.publish(Publish::new(rabbit_id.as_bytes(), queue_name))?;
+
+    connection.close()
+}

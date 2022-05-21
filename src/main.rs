@@ -7,6 +7,7 @@ use reql::types::ServerStatus;
 use rocket::fs::FileServer;
 
 mod resources;
+mod workers;
 
 #[get("/rethink")]
 async fn rethink() -> String {
@@ -60,7 +61,8 @@ fn rocket() -> _ {
         Err(err) => panic!("failed to connect: {:?}", err),
     };
 
-    match rabbitmq_consume(&mut connection) {
+    //match rabbitmq_consume(&mut connection) {
+    match workers::init_rabbit_generator(&mut connection, "rabbit.updated") {
         Ok(()) => println!("consumer started..."),
         Err(err) => println!("consumer fail: {:?}", err),
     };
@@ -109,7 +111,7 @@ fn rabbitmq_consume(connection: &mut Connection) -> amiquip::Result<()> {
 
     thread::spawn(move || -> amiquip::Result<()> {
         //println!("consumer spawned!");
-        let queue = channel.queue_declare("hello", QueueDeclareOptions::default()).map_err(|e| {
+        let queue = channel.queue_declare("rabbitupdated", QueueDeclareOptions::default()).map_err(|e| {
             println!("error: {:?}", e);
             e
         })?;
