@@ -10,48 +10,9 @@ mod resources;
 mod workers;
 mod cha;
 
-#[get("/rethink")]
-async fn rethink() -> String {
-    match tryrethink2().await {
-        Ok(s) => s,
-        Err(error) => {
-            println!("error: {:?}", error);
-            "error".to_string()
-        },
-    }
-}
-
-#[get("/rabbitmq")]
-fn rabbitmq() -> String {
-    match tryrabbitmq() {
-        Ok(()) => "ok".to_string(),
-        Err(err) => {
-           println!("error: {:?}", err);
-           "error".to_string()
-        },
-    }
-}
-
-#[get("/redis/getfoo")]
-fn redis_getfoo() -> String {
-    match redis_get() {
-        Ok(s) => s,
-        Err(err) => {
-           println!("error: {:?}", err);
-           "error".to_string()
-        },
-    }
-}
-
-#[get("/redis/setfoo")]
-fn redis_setfoo() -> String {
-    match redis_set() {
-        Ok(()) => "OK".to_string(),
-        Err(err) => {
-           println!("error: {:?}", err);
-           "error".to_string()
-        },
-    }
+#[get("/ping")]
+fn ping() -> () {
+    ()
 }
 
 #[launch]
@@ -71,16 +32,65 @@ fn rocket() -> _ {
     .manage(connection)
     .mount("/", FileServer::from("./ui/build"))
     .mount("/", routes![
-        rethink,
-        rabbitmq,
-        redis_getfoo,
-        redis_setfoo,
-        resources::create_rabbit,
-        resources::create_rabbit2,
+        ping,
+        //rethink,
+        //rabbitmq,
+        //redis_getfoo,
+        //redis_setfoo,
+        //resources::create_rabbit,
+        //resources::create_rabbit2,
         resources::create_rabbit3,
-        resources::get_rabbit,
+        //resources::get_rabbit,
         resources::get_rabbit3,
     ])
+}
+
+#[allow(dead_code)]
+#[get("/rethink")]
+async fn rethink() -> String {
+    match tryrethink2().await {
+        Ok(s) => s,
+        Err(error) => {
+            println!("error: {:?}", error);
+            "error".to_string()
+        },
+    }
+}
+
+#[allow(dead_code)]
+#[get("/rabbitmq")]
+fn rabbitmq() -> String {
+    match tryrabbitmq() {
+        Ok(()) => "ok".to_string(),
+        Err(err) => {
+           println!("error: {:?}", err);
+           "error".to_string()
+        },
+    }
+}
+
+#[allow(dead_code)]
+#[get("/redis/getfoo")]
+pub fn redis_getfoo() -> String {
+    match redis_get() {
+        Ok(s) => s,
+        Err(err) => {
+           println!("error: {:?}", err);
+           "error".to_string()
+        },
+    }
+}
+
+#[allow(dead_code)]
+#[get("/redis/setfoo")]
+pub fn redis_setfoo() -> String {
+    match redis_set() {
+        Ok(()) => "OK".to_string(),
+        Err(err) => {
+           println!("error: {:?}", err);
+           "error".to_string()
+        },
+    }
 }
 
 use amiquip::{Connection};

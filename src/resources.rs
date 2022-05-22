@@ -36,6 +36,7 @@ pub struct Rabbit {
     pub eye_color: Option<String>,
 }
 
+#[allow(dead_code)]
 #[post("/api/rabbits", data = "<request_data>")]
 pub fn create_rabbit(
     request_data: Json<CreateRabbitRequest>,
@@ -44,6 +45,7 @@ pub fn create_rabbit(
     data.name
 }
 
+#[allow(dead_code)]
 #[post("/api2/rabbits", data = "<request_data>")]
 pub async fn create_rabbit2(
     request_data: Json<CreateRabbitRequest>,
@@ -83,6 +85,7 @@ pub async fn create_rabbit3(
     }
 }
 
+#[allow(dead_code)]
 #[get("/api/rabbits/<id>")]
 pub async fn get_rabbit(
     id: String,
