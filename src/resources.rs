@@ -5,6 +5,7 @@ use reql::{r, cmd::connect::Options};
 
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use super::config;
 
 #[derive(Debug, Serialize, Deserialize, FromForm)]
 pub struct CreateRabbitRequest {
@@ -114,7 +115,7 @@ pub async fn get_rabbit3(
 
 async fn save_rabbit2(rabbit: &CreateRabbitData) -> reql::Result<String> {
     let conn = r.connect(
-        Options::new().port(55001)
+        Options::new().port(config::RETHINKDB_PORT)
     ).await?;
 
     let mut query = r.db("test").table("testrabbits")
@@ -165,7 +166,7 @@ fn get_id(stat: &WriteStatus) -> Option<String> {
 
 async fn save_rabbit(rabbit: &CreateRabbitRequest) -> reql::Result<String> {
     let conn = r.connect(
-        Options::new().port(55001)
+        Options::new().port(config::RETHINKDB_PORT)
     ).await?;
 
     let mut query = r.db("test").table("testrabbits")
@@ -182,7 +183,7 @@ async fn save_rabbit(rabbit: &CreateRabbitRequest) -> reql::Result<String> {
 
 async fn db_get_rabbit(id: String) -> reql::Result<String> {
     let conn = r.connect(
-        Options::new().port(55001)
+        Options::new().port(config::RETHINKDB_PORT)
     ).await?;
 
     let mut query = r.db("test").table("testrabbits")
@@ -199,7 +200,7 @@ async fn db_get_rabbit(id: String) -> reql::Result<String> {
 
 async fn db_get_rabbit3(id: String) -> reql::Result<String> {
     let conn = r.connect(
-        Options::new().port(55001)
+        Options::new().port(config::RETHINKDB_PORT)
     ).await?;
 
     let mut query = r.db("test").table("testrabbits")
@@ -242,7 +243,7 @@ use amiquip::{Connection};
 fn publish_rabbit(rabbit_id: &String, queue_name: &'static str) -> amiquip::Result<()> {
     use amiquip::{Exchange, Publish};
 
-    let mut connection = Connection::insecure_open("amqp://guest:guest@localhost:55006")?;
+    let mut connection = Connection::insecure_open(config::RABBITMQ_URL)?;
     // Open a channel - None says let the library choose the channel ID.
     let channel = connection.open_channel(None)?;
 

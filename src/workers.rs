@@ -6,6 +6,7 @@ use reql::{r, cmd::connect::Options};
 
 use super::resources::RabbitStatus;
 use super::cha;
+use super::config;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateRabbitData {
@@ -27,7 +28,7 @@ fn get_id(stat: &WriteStatus) -> Option<()> {
 
 async fn update_rabbit(id: &String) -> reql::Result<()> {
     let conn = r.connect(
-        Options::new().port(55001)
+        Options::new().port(config::RETHINKDB_PORT)
     ).await?;
 
     let body_color = cha::hash(id);

@@ -9,6 +9,7 @@ use rocket::fs::FileServer;
 mod resources;
 mod workers;
 mod cha;
+mod config;
 
 #[get("/ping")]
 fn ping() -> () {
@@ -18,7 +19,7 @@ fn ping() -> () {
 #[launch]
 fn rocket() -> _ {
     use amiquip::{Connection};
-    let mut connection = match Connection::insecure_open("amqp://guest:guest@localhost:55006") {
+    let mut connection = match Connection::insecure_open(config::RABBITMQ_URL) {
         Ok(c) => c,
         Err(err) => panic!("failed to connect: {:?}", err),
     };
@@ -98,7 +99,7 @@ fn tryrabbitmq() -> amiquip::Result<()> {
     use amiquip::{Exchange, Publish};
     use std::time::{SystemTime};
 
-    let mut connection = Connection::insecure_open("amqp://guest:guest@localhost:55006")?;
+    let mut connection = Connection::insecure_open(config::RABBITMQ_URL)?;
     // Open a channel - None says let the library choose the channel ID.
     let channel = connection.open_channel(None)?;
 
@@ -117,11 +118,9 @@ fn rabbitmq_consume(connection: &mut Connection) -> amiquip::Result<()> {
     use amiquip::{QueueDeclareOptions, ConsumerOptions, ConsumerMessage};
     use std::thread;
 
-    //let mut connection = Connection::insecure_open("amqp://guest:guest@localhost:55006")?;
     let channel = connection.open_channel(None)?;
 
     thread::spawn(move || -> amiquip::Result<()> {
-        //println!("consumer spawned!");
         let queue = channel.queue_declare("rabbitupdated", QueueDeclareOptions::default()).map_err(|e| {
             println!("error: {:?}", e);
             e
@@ -159,7 +158,7 @@ fn rabbitmq_consume(connection: &mut Connection) -> amiquip::Result<()> {
 
 async fn tryrethink2() -> reql::Result<String> {
     let conn = r.connect(
-        Options::new().port(55001)
+        Options::new().port(config::RETHINKDB_PORT)
     ).await?;
 
     let mut query = r.db("rethinkdb").table("server_status").run(&conn);
@@ -182,7 +181,7 @@ fn handle2(server_status: &ServerStatus) -> String {
 #[allow(dead_code)]
 async fn tryrethink() -> reql::Result<()> {
     let conn = r.connect(
-        Options::new().port(55001)
+        Options::new().port(config::RETHINKDB_PORT)
     ).await?;
 
     let mut query = r.db("rethinkdb").table("server_status").run(&conn);
@@ -204,7 +203,7 @@ extern crate redis;
 use redis::Commands;
 
 fn redis_set() -> redis::RedisResult<()> {
-    let client = redis::Client::open("redis://127.0.0.1:55009/")?;
+    let client = redis::Client::open(config::REDIS_URL)?;
     let mut con = client.get_connection()?;
 
     /* do something here */
@@ -214,7 +213,7 @@ fn redis_set() -> redis::RedisResult<()> {
 }
 
 fn redis_get() -> redis::RedisResult<String> {
-    let client = redis::Client::open("redis://127.0.0.1:55009/")?;
+    let client = redis::Client::open(config::REDIS_URL)?;
     let mut con = client.get_connection()?;
 
     /* do something here */
