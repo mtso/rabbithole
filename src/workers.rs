@@ -37,9 +37,9 @@ async fn update_rabbit(id: &String) -> reql::Result<()> {
     let update = UpdateRabbitData{
         id: id.clone(),
         status: RabbitStatus::birthed,
-        body_color: body_color,//String::from("#123123"),
-        patch_color: patch_color, // String::from("#123123"),
-        eye_color: eye_color, //String::from("#123123"),
+        body_color: body_color,
+        patch_color: patch_color,
+        eye_color: eye_color,
     };
     println!("update data {:?}", update);
 
@@ -63,7 +63,7 @@ async fn update_rabbit(id: &String) -> reql::Result<()> {
 
 pub fn init_rabbit_generator(connection: &mut Connection, queue_name: &'static str) -> amiquip::Result<()> {
     use amiquip::{QueueDeclareOptions, ConsumerOptions, ConsumerMessage};
-    use std::thread;
+    use std::{thread, time};
 
     let channel = connection.open_channel(None)?;
 
@@ -84,15 +84,18 @@ pub fn init_rabbit_generator(connection: &mut Connection, queue_name: &'static s
 
         match message {
             ConsumerMessage::Delivery(delivery) => {
-
                 let body = String::from_utf8_lossy(&delivery.body);
                 let id = format!("{}", body);
+                consumer.ack(delivery)?;
+
+                // Making rabbits takes time!
+                let dur = time::Duration::from_millis(3_000);
+                thread::sleep(dur);
+
                 match block_on(update_rabbit(&id)) {
                     Ok(()) => (),
                     Err(err) => println!("failed to process id={} {:?}", id, err),
                 };
-
-                consumer.ack(delivery)?;
             }
             other => {
                 println!("Consumer ended: {:?}", other);

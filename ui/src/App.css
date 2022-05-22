@@ -36,3 +36,15 @@
     transform: rotate(360deg);
   }
 }
+
+.action_button {
+  margin: 1em;
+  font-size: 2em;
+  font-weight: bold;
+  padding: 1em 2em;
+  border-radius: 16px;
+
+  background-color: mediumseagreen;
+  color: white;
+}
+
