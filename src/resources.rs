@@ -1,11 +1,11 @@
-use rocket::serde::{Serialize, json::Json};
-use reql::types::WriteStatus;
 use futures::TryStreamExt;
-use reql::{r, cmd::connect::Options};
+use reql::types::WriteStatus;
+use reql::{cmd::connect::Options, r};
+use rocket::serde::{json::Json, Serialize};
 
-use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 use super::config;
+use chrono::{DateTime, Utc};
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, FromForm)]
 pub struct CreateRabbitRequest {
@@ -18,7 +18,7 @@ pub enum RabbitStatus {
     pending,
     birthed,
 }
-    
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateRabbitData {
     name: String,
@@ -39,18 +39,14 @@ pub struct Rabbit {
 
 #[allow(dead_code)]
 #[post("/api/rabbits", data = "<request_data>")]
-pub fn create_rabbit(
-    request_data: Json<CreateRabbitRequest>,
-) -> String {
+pub fn create_rabbit(request_data: Json<CreateRabbitRequest>) -> String {
     let data = request_data.into_inner();
     data.name
 }
 
 #[allow(dead_code)]
 #[post("/api2/rabbits", data = "<request_data>")]
-pub async fn create_rabbit2(
-    request_data: Json<CreateRabbitRequest>,
-) -> String {
+pub async fn create_rabbit2(request_data: Json<CreateRabbitRequest>) -> String {
     let data = request_data.into_inner();
     match save_rabbit(&data).await {
         Ok(s) => s,
@@ -59,16 +55,14 @@ pub async fn create_rabbit2(
 }
 
 #[post("/api3/rabbits", data = "<request_data>")]
-pub async fn create_rabbit3(
-    request_data: Json<CreateRabbitRequest>,
-) -> String {
+pub async fn create_rabbit3(request_data: Json<CreateRabbitRequest>) -> String {
     let data = request_data.into_inner();
-    let new_rabbit = CreateRabbitData{
+    let new_rabbit = CreateRabbitData {
         name: data.name,
         created_at: Utc::now(),
         status: RabbitStatus::pending,
     };
-/*
+    /*
     let rabbit = Rabbit{
         id: None,
         name: data.name,
@@ -82,15 +76,13 @@ pub async fn create_rabbit3(
         Err(err) => {
             println!("save error: {:?}", err);
             "save error".to_string()
-        },
+        }
     }
 }
 
 #[allow(dead_code)]
 #[get("/api/rabbits/<id>")]
-pub async fn get_rabbit(
-    id: String,
-) -> String {
+pub async fn get_rabbit(id: String) -> String {
     match db_get_rabbit(id).await {
         Ok(s) => s,
         Err(error) => {
@@ -101,9 +93,7 @@ pub async fn get_rabbit(
 }
 
 #[get("/api3/rabbits/<id>")]
-pub async fn get_rabbit3(
-    id: String,
-) -> String {
+pub async fn get_rabbit3(id: String) -> String {
     match db_get_rabbit3(id).await {
         Ok(s) => s,
         Err(error) => {
@@ -114,13 +104,11 @@ pub async fn get_rabbit3(
 }
 
 async fn save_rabbit2(rabbit: &CreateRabbitData) -> reql::Result<String> {
-    let conn = r.connect(
-        Options::new().port(config::RETHINKDB_PORT)
-    ).await?;
+    let conn = r
+        .connect(Options::new().port(config::RETHINKDB_PORT))
+        .await?;
 
-    let mut query = r.db("test").table("testrabbits")
-        .insert(rabbit)
-        .run(&conn);
+    let mut query = r.db("test").table("testrabbits").insert(rabbit).run(&conn);
 
     if let Some(write_status) = query.try_next().await? {
         if let Some(id) = get_id(&write_status) {
@@ -129,8 +117,7 @@ async fn save_rabbit2(rabbit: &CreateRabbitData) -> reql::Result<String> {
                 Err(err) => println!("error publishing rabbit: {:?}", err),
             };
 
-            let mut fetchq = r.db("test").table("testrabbits")
-                .get(id).run(&conn);
+            let mut fetchq = r.db("test").table("testrabbits").get(id).run(&conn);
 
             if let Some(result) = fetchq.try_next().await? {
                 match rabbit_to_json(&result) {
@@ -138,7 +125,7 @@ async fn save_rabbit2(rabbit: &CreateRabbitData) -> reql::Result<String> {
                     Err(err) => {
                         println!("json error: {:?}", err);
                         Ok("json error".to_string())
-                    },
+                    }
                 }
             } else {
                 Ok("error fetching".to_string())
@@ -158,20 +145,18 @@ fn rabbit_to_json(data: &Rabbit) -> serde_json::Result<String> {
 fn get_id(stat: &WriteStatus) -> Option<String> {
     if let Some(keys) = &stat.generated_keys {
         if keys.len() >= 1 {
-            return keys.get(0).map(|uuid| { uuid.to_hyphenated().to_string() });
+            return keys.get(0).map(|uuid| uuid.to_hyphenated().to_string());
         }
     }
     None
 }
 
 async fn save_rabbit(rabbit: &CreateRabbitRequest) -> reql::Result<String> {
-    let conn = r.connect(
-        Options::new().port(config::RETHINKDB_PORT)
-    ).await?;
+    let conn = r
+        .connect(Options::new().port(config::RETHINKDB_PORT))
+        .await?;
 
-    let mut query = r.db("test").table("testrabbits")
-        .insert(rabbit)
-        .run(&conn);
+    let mut query = r.db("test").table("testrabbits").insert(rabbit).run(&conn);
 
     if let Some(write_status) = query.try_next().await? {
         let res = handle_write(&write_status);
@@ -182,13 +167,11 @@ async fn save_rabbit(rabbit: &CreateRabbitRequest) -> reql::Result<String> {
 }
 
 async fn db_get_rabbit(id: String) -> reql::Result<String> {
-    let conn = r.connect(
-        Options::new().port(config::RETHINKDB_PORT)
-    ).await?;
+    let conn = r
+        .connect(Options::new().port(config::RETHINKDB_PORT))
+        .await?;
 
-    let mut query = r.db("test").table("testrabbits")
-        .get(id)
-        .run(&conn);
+    let mut query = r.db("test").table("testrabbits").get(id).run(&conn);
 
     if let Some(change) = query.try_next().await? {
         let res = handle_map(&change);
@@ -199,13 +182,11 @@ async fn db_get_rabbit(id: String) -> reql::Result<String> {
 }
 
 async fn db_get_rabbit3(id: String) -> reql::Result<String> {
-    let conn = r.connect(
-        Options::new().port(config::RETHINKDB_PORT)
-    ).await?;
+    let conn = r
+        .connect(Options::new().port(config::RETHINKDB_PORT))
+        .await?;
 
-    let mut query = r.db("test").table("testrabbits")
-        .get(id)
-        .run(&conn);
+    let mut query = r.db("test").table("testrabbits").get(id).run(&conn);
 
     if let Some(result) = query.try_next().await? {
         match rabbit_to_json(&result) {
@@ -213,7 +194,7 @@ async fn db_get_rabbit3(id: String) -> reql::Result<String> {
             Err(e) => {
                 println!("error rendering json: {:?}", e);
                 Ok("json error".to_string())
-            },
+            }
         }
     } else {
         Ok("error".to_string())
@@ -239,7 +220,7 @@ fn handle_map(map: &HashMap<String, String>) -> String {
     }
 }
 
-use amiquip::{Connection};
+use amiquip::Connection;
 fn publish_rabbit(rabbit_id: &String, queue_name: &'static str) -> amiquip::Result<()> {
     use amiquip::{Exchange, Publish};
 

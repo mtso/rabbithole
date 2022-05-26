@@ -1,12 +1,11 @@
-use amiquip::{Connection};
-use futures::TryStreamExt;
 use futures::executor::block_on;
+use futures::TryStreamExt;
 use reql::types::WriteStatus;
-use reql::{r, cmd::connect::Options};
+use reql::{cmd::connect::Options, r};
 
-use super::resources::RabbitStatus;
 use super::cha;
 use super::config;
+use super::resources::RabbitStatus;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateRabbitData {
@@ -27,15 +26,15 @@ fn get_id(stat: &WriteStatus) -> Option<()> {
 }
 
 async fn update_rabbit(id: &String) -> reql::Result<()> {
-    let conn = r.connect(
-        Options::new().port(config::RETHINKDB_PORT)
-    ).await?;
+    let conn = r
+        .connect(Options::new().port(config::RETHINKDB_PORT))
+        .await?;
 
     let body_color = cha::hash(id);
     let patch_color = cha::hash(&body_color);
     let eye_color = cha::hash(&patch_color);
 
-    let update = UpdateRabbitData{
+    let update = UpdateRabbitData {
         id: id.clone(),
         status: RabbitStatus::birthed,
         body_color: body_color,
@@ -44,9 +43,7 @@ async fn update_rabbit(id: &String) -> reql::Result<()> {
     };
     println!("update data {:?}", update);
 
-    let mut query = r.db("test").table("testrabbits")
-        .update(update)
-        .run(&conn);
+    let mut query = r.db("test").table("testrabbits").update(update).run(&conn);
 
     if let Some(result) = query.try_next().await? {
         if let Some(()) = get_id(&result) {
@@ -61,28 +58,16 @@ async fn update_rabbit(id: &String) -> reql::Result<()> {
     Ok(())
 }
 
-
-pub fn init_rabbit_generator(connection: &mut Connection, queue_name: &'static str) -> amiquip::Result<()> {
-    use amiquip::{QueueDeclareOptions, ConsumerOptions, ConsumerMessage};
+fn rabbit_generator(queue_name: &'static str) -> amiquip::Result<()> {
+    use amiquip::{Connection, ConsumerMessage, ConsumerOptions, QueueDeclareOptions};
     use std::{thread, time};
-
+    let mut connection = Connection::insecure_open(config::RABBITMQ_URL)?;
     let channel = connection.open_channel(None)?;
+    let queue = channel.queue_declare(queue_name, QueueDeclareOptions::default())?;
+    let consumer = queue.consume(ConsumerOptions::default())?;
+    println!("consumer spawned! topic={}", queue_name);
 
-    thread::spawn(move || -> amiquip::Result<()> {
-        let queue = channel.queue_declare(queue_name, QueueDeclareOptions::default()).map_err(|e| {
-            println!("error: {:?}", e);
-            e
-        })?;
-
-        let consumer = queue.consume(ConsumerOptions::default()).map_err(|e| {
-            println!("error: {:?}", e);
-            e
-        })?;
-
-        println!("consumer spawned! topic={}", queue_name);
-
-        for message in consumer.receiver().iter() {
-
+    for message in consumer.receiver().iter() {
         match message {
             ConsumerMessage::Delivery(delivery) => {
                 let body = String::from_utf8_lossy(&delivery.body);
@@ -99,18 +84,30 @@ pub fn init_rabbit_generator(connection: &mut Connection, queue_name: &'static s
                 };
             }
             other => {
-                println!("Consumer ended: {:?}", other);
+                println!("consumer ended: {:?}", other);
                 break;
             }
         }
+    }
+    Ok(())
+}
 
+pub fn init_rabbit_generator(queue_name: &'static str) -> amiquip::Result<()> {
+    use std::{thread, time};
+
+    thread::spawn(move || -> ! {
+        let mut restarts = 0;
+        loop {
+            println!("consumer init: restarts={}", restarts);
+            match rabbit_generator(queue_name) {
+                Ok(()) => println!("consumer stopped, trying again..."),
+                Err(e) => println!("consumer failed, trying again... {:?}", e),
+            };
+
+            restarts += 1;
+            thread::sleep(time::Duration::from_millis(5_000));
         }
-
-        println!("consumer ending!");
-        Ok(())
     });
 
     Ok(())
 }
-
-

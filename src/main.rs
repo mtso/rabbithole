@@ -1,15 +1,17 @@
-#[macro_use] extern crate rocket;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate rocket;
+#[macro_use]
+extern crate serde_derive;
 
 use futures::TryStreamExt;
-use reql::{r, cmd::connect::Options};
 use reql::types::ServerStatus;
+use reql::{cmd::connect::Options, r};
 use rocket::fs::FileServer;
 
-mod resources;
-mod workers;
 mod cha;
 mod config;
+mod resources;
+mod workers;
 
 #[get("/ping")]
 fn ping() -> () {
@@ -18,32 +20,35 @@ fn ping() -> () {
 
 #[launch]
 fn rocket() -> _ {
-    use amiquip::{Connection};
-    let mut connection = match Connection::insecure_open(config::RABBITMQ_URL) {
+    use amiquip::Connection;
+    let connection = match Connection::insecure_open(config::RABBITMQ_URL) {
         Ok(c) => c,
         Err(err) => panic!("failed to connect: {:?}", err),
     };
 
-    match workers::init_rabbit_generator(&mut connection, "rabbit.updated") {
-        Ok(()) => println!("consumer started..."),
-        Err(err) => println!("consumer fail: {:?}", err),
+    match workers::init_rabbit_generator("rabbit.updated") {
+        Err(err) => panic!("failed to initialize generator: {:?}", err),
+        _ => (),
     };
 
     rocket::build()
-    .manage(connection)
-    .mount("/", FileServer::from("./ui/build"))
-    .mount("/", routes![
-        ping,
-        //rethink,
-        //rabbitmq,
-        //redis_getfoo,
-        //redis_setfoo,
-        //resources::create_rabbit,
-        //resources::create_rabbit2,
-        resources::create_rabbit3,
-        //resources::get_rabbit,
-        resources::get_rabbit3,
-    ])
+        .manage(connection)
+        .mount("/", FileServer::from("./ui/build"))
+        .mount(
+            "/",
+            routes![
+                ping,
+                //rethink,
+                //rabbitmq,
+                //redis_getfoo,
+                //redis_setfoo,
+                //resources::create_rabbit,
+                //resources::create_rabbit2,
+                resources::create_rabbit3,
+                //resources::get_rabbit,
+                resources::get_rabbit3,
+            ],
+        )
 }
 
 #[allow(dead_code)]
@@ -54,7 +59,7 @@ async fn rethink() -> String {
         Err(error) => {
             println!("error: {:?}", error);
             "error".to_string()
-        },
+        }
     }
 }
 
@@ -64,9 +69,9 @@ fn rabbitmq() -> String {
     match tryrabbitmq() {
         Ok(()) => "ok".to_string(),
         Err(err) => {
-           println!("error: {:?}", err);
-           "error".to_string()
-        },
+            println!("error: {:?}", err);
+            "error".to_string()
+        }
     }
 }
 
@@ -76,9 +81,9 @@ pub fn redis_getfoo() -> String {
     match redis_get() {
         Ok(s) => s,
         Err(err) => {
-           println!("error: {:?}", err);
-           "error".to_string()
-        },
+            println!("error: {:?}", err);
+            "error".to_string()
+        }
     }
 }
 
@@ -88,16 +93,16 @@ pub fn redis_setfoo() -> String {
     match redis_set() {
         Ok(()) => "OK".to_string(),
         Err(err) => {
-           println!("error: {:?}", err);
-           "error".to_string()
-        },
+            println!("error: {:?}", err);
+            "error".to_string()
+        }
     }
 }
 
-use amiquip::{Connection};
+use amiquip::Connection;
 fn tryrabbitmq() -> amiquip::Result<()> {
     use amiquip::{Exchange, Publish};
-    use std::time::{SystemTime};
+    use std::time::SystemTime;
 
     let mut connection = Connection::insecure_open(config::RABBITMQ_URL)?;
     // Open a channel - None says let the library choose the channel ID.
@@ -115,36 +120,36 @@ fn tryrabbitmq() -> amiquip::Result<()> {
 
 #[allow(dead_code)]
 fn rabbitmq_consume(connection: &mut Connection) -> amiquip::Result<()> {
-    use amiquip::{QueueDeclareOptions, ConsumerOptions, ConsumerMessage};
+    use amiquip::{ConsumerMessage, ConsumerOptions, QueueDeclareOptions};
     use std::thread;
 
     let channel = connection.open_channel(None)?;
 
     thread::spawn(move || -> amiquip::Result<()> {
-        let queue = channel.queue_declare("rabbitupdated", QueueDeclareOptions::default()).map_err(|e| {
-            println!("error: {:?}", e);
-            e
-        })?;
+        let queue = channel
+            .queue_declare("rabbitupdated", QueueDeclareOptions::default())
+            .map_err(|e| {
+                println!("error: {:?}", e);
+                e
+            })?;
         let consumer = queue.consume(ConsumerOptions::default()).map_err(|e| {
             println!("error: {:?}", e);
             e
         })?;
 
-
         println!("consumer spawned!");
         for message in consumer.receiver().iter() {
-
-        match message {
-            ConsumerMessage::Delivery(delivery) => {
-                let body = String::from_utf8_lossy(&delivery.body);
-                println!("Received [{}]", body);
-                consumer.ack(delivery)?;
+            match message {
+                ConsumerMessage::Delivery(delivery) => {
+                    let body = String::from_utf8_lossy(&delivery.body);
+                    println!("Received [{}]", body);
+                    consumer.ack(delivery)?;
+                }
+                other => {
+                    println!("Consumer ended: {:?}", other);
+                    break;
+                }
             }
-            other => {
-                println!("Consumer ended: {:?}", other);
-                break;
-            }
-        }
 
             //println!("got message!: {:?}", message);
         }
@@ -157,9 +162,9 @@ fn rabbitmq_consume(connection: &mut Connection) -> amiquip::Result<()> {
 }
 
 async fn tryrethink2() -> reql::Result<String> {
-    let conn = r.connect(
-        Options::new().port(config::RETHINKDB_PORT)
-    ).await?;
+    let conn = r
+        .connect(Options::new().port(config::RETHINKDB_PORT))
+        .await?;
 
     let mut query = r.db("rethinkdb").table("server_status").run(&conn);
 
@@ -180,9 +185,9 @@ fn handle2(server_status: &ServerStatus) -> String {
 
 #[allow(dead_code)]
 async fn tryrethink() -> reql::Result<()> {
-    let conn = r.connect(
-        Options::new().port(config::RETHINKDB_PORT)
-    ).await?;
+    let conn = r
+        .connect(Options::new().port(config::RETHINKDB_PORT))
+        .await?;
 
     let mut query = r.db("rethinkdb").table("server_status").run(&conn);
 
