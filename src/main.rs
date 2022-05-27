@@ -20,6 +20,8 @@ fn ping() -> () {
 
 #[launch]
 fn rocket() -> _ {
+    println!("Initializing version: 0.1.2");
+
     use amiquip::Connection;
     let connection = match Connection::insecure_open(config::RABBITMQ_URL) {
         Ok(c) => c,

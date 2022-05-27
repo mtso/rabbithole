@@ -37,6 +37,29 @@ pub struct Rabbit {
     pub eye_color: Option<String>,
 }
 
+impl Clone for Rabbit {
+    fn clone(&self) -> Rabbit {
+        Rabbit{
+            id: self.id.clone(),
+            created_at: self.created_at.clone(),
+            status: self.status.clone(),
+            name: self.name.clone(),
+            body_color: self.body_color.clone(),
+            patch_color: self.patch_color.clone(),
+            eye_color: self.eye_color.clone(),
+        }
+    }
+}
+
+impl Clone for RabbitStatus {
+    fn clone(&self) -> RabbitStatus {
+        match self {
+            RabbitStatus::pending => RabbitStatus::pending,
+            RabbitStatus::birthed => RabbitStatus::birthed,
+        }
+    }
+}
+
 #[allow(dead_code)]
 #[post("/api/rabbits", data = "<request_data>")]
 pub fn create_rabbit(request_data: Json<CreateRabbitRequest>) -> String {
@@ -189,7 +212,20 @@ async fn db_get_rabbit3(id: String) -> reql::Result<String> {
     let mut query = r.db("test").table("testrabbits").get(id).run(&conn);
 
     if let Some(result) = query.try_next().await? {
-        match rabbit_to_json(&result) {
+        let rabbit: Rabbit = result;
+
+        match rabbit.clone().status {
+            RabbitStatus::pending => {
+                if let Some(id) = rabbit.id.clone() {
+                    if let Err(e) = publish_rabbit(&id, "rabbit.updated") {
+                        println!("failed to publish rabbit_id={:?} {:?}", rabbit.id, e);
+                    }
+                }
+            },
+            _ => (),
+        };
+
+        match rabbit_to_json(&rabbit) {
             Ok(s) => Ok(s),
             Err(e) => {
                 println!("error rendering json: {:?}", e);

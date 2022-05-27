@@ -9,19 +9,22 @@ use super::resources::RabbitStatus;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateRabbitData {
-    id: String,
     status: RabbitStatus,
     body_color: String,
     patch_color: String,
     eye_color: String,
 }
 
-fn get_id(stat: &WriteStatus) -> Option<()> {
+fn check_changes(stat: &WriteStatus) -> Option<()> {
+    if stat.replaced > 0 || stat.unchanged > 0 {
+        return Some(());
+    }
     if let Some(changes) = &stat.changes {
         if changes.len() > 0 {
             return Some(());
         }
     }
+    println!("unrecognized stat pattern! {:?}", stat);
     None
 }
 
@@ -35,7 +38,6 @@ async fn update_rabbit(id: &String) -> reql::Result<()> {
     let eye_color = cha::hash(&patch_color);
 
     let update = UpdateRabbitData {
-        id: id.clone(),
         status: RabbitStatus::birthed,
         body_color: body_color,
         patch_color: patch_color,
@@ -43,13 +45,13 @@ async fn update_rabbit(id: &String) -> reql::Result<()> {
     };
     println!("update data {:?}", update);
 
-    let mut query = r.db("test").table("testrabbits").update(update).run(&conn);
+    let mut query = r.db("test").table("testrabbits").get(id.clone()).update(update).run(&conn);
 
     if let Some(result) = query.try_next().await? {
-        if let Some(()) = get_id(&result) {
-            println!("Update success id={}", id);
+        if let Some(()) = check_changes(&result) {
+            println!("WORKER: processing success id={}", id);
         } else {
-            println!("Update failed id={}", id);
+            println!("WORKER: processing potentially failed id={}", id);
         }
     } else {
         println!("query error");
