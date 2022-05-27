@@ -1,6 +1,13 @@
 export default function RabbitBirthing() {
   return (
-    <div>Birthing...</div>
+    <div
+      style={{
+        fontSize: '2em',
+        fontWeight: "bold",
+        margin: "4em auto",
+        textAlign: "center",
+      }}
+    >Birthing...</div>
   )
 }
 

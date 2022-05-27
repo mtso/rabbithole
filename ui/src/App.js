@@ -37,6 +37,12 @@ function App() {
     return (
       <div className="App">
         <button
+          style={{
+            opacity: clicked ? 0.4 : 1.0,
+            border: '2px solid darkgreen',
+            margin: '4em auto',
+            cursor: "pointer",
+          }}
           className="action_button"
           disabled={clicked}
           onClick={() => {
@@ -48,7 +54,7 @@ function App() {
               let p = new URLSearchParams();
               p.set("rabbit", rabbit.id);
               window.location.search = p;
-            }).catch(console.error);
+            }).catch(console.error).finally(() => setClicked(false));
           }}
         >Create Rabbit</button>
       </div>
@@ -57,26 +63,6 @@ function App() {
   else {
     return <RabbitContainer />
   }
-
-/*
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );*/
 }
 
 export default App;

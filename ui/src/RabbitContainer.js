@@ -45,7 +45,14 @@ export default function RabbitContainer() {
   }, [id, status, dispatch]);
 
   if (status === null) {
-    return <div>Loading...</div>
+    return <div
+      style={{
+        fontSize: '2em',
+        fontWeight: "bold",
+        margin: "4em auto",
+        textAlign: "center",
+      }}
+    >Loading...</div>
   }
   else if (status === "pending") {
     return <RabbitBirthing />
