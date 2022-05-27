@@ -12,6 +12,4 @@ rabbithole is a web app for generating colorful rabbits!
 - Rocket.rs
 - RethinkDB
 - RabbitMQ
-- Reproxy
 - RockyLinux
-
